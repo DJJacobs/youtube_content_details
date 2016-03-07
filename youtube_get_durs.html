@@ -1,0 +1,160 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>YT API Test</title>
+    <style>
+    #content {
+        padding: 10pt;
+        border: 2px dashed lightgray;
+    }
+
+    .vidcontainer {
+      width: 200px;
+      height: 112px;
+      position: relative;
+    }
+    .vidimg {
+      width: 200px;
+      height: 112px;
+      background: #00FF00;
+      position: absolute;
+    }
+    .vidlength {
+      background: #000;
+      position: absolute;
+      color: #fff;
+      z-index: 9;
+      bottom: 0px;
+      right: 0;
+      padding: 2.5px 4px 2.5px 4px;
+      border-top-left-radius: 4px; 
+      display: block;
+    }
+    .nextPagebutton { background-color: #4CAF50; font-size: 14px; margin-top: 10px; }
+    }
+    #submitButton {background-color: #grey; font-size: 14px; margin-top: 10px;}
+    </style>
+
+<script type="text/javascript" src="http://127.0.0.1/jquery-1.11.1.js"></script>
+<script type="text/javascript"></script>
+
+<script>
+
+
+var devkey ='AIzaSyBoWMPAh9Tmp2BekV1xAhRvZzqlHLaFbYo'; 
+// var userid;
+var someVideos = 'KdGeVvQmM8c';
+var titleSet = [];
+var videoidSet = [];
+var durationSet = [];
+var ytStyleDurationSet = [];
+var nextPageTokenVar;
+
+
+
+
+    
+$(document).ready(function(){ 
+$(document).on("click", "#submitButton", function() {
+        var userid = $("#chNameInput").val();
+
+var count = 0;
+
+ $.get( 
+        "https://www.googleapis.com/youtube/v3/channels",{ part: 'contentDetails', forUsername: userid, key: devkey}, 
+            function(data){ 
+                    $.each(data.items, function(i, item){ 
+                    pid = item.contentDetails.relatedPlaylists.uploads; 
+                    $("#yt_content").append("<b>Channel name: " + "<code>" + userid +"<code></br>playlistID: </b><code>" + pid + "</code>");
+                    getVids(pid);
+                 }) 
+            } 
+    ); 
+
+
+//use playlistID to get all upload snippets for each video_id
+    function getVids(pid){
+            $.get("https://www.googleapis.com/youtube/v3/playlistItems",{ part: 'snippet', playlistId: pid, pageToken: nextPageTokenVar, maxResults: '15', key: devkey}, 
+                function(data){
+                    nextPageTokenVar = data.nextPageToken;
+                    console.log("this is token from first if: " + nextPageTokenVar);
+                    $.each(data.items, function(i, item){ 
+                        videoid = item.snippet.resourceId.videoId;
+                        titleSet.push(item.snippet.title);
+                        videoidSet.push(item.snippet.resourceId.videoId);
+                        getdur(videoid); 
+                        }) 
+                    } 
+                ); 
+            }
+  
+$( ".nextPagebutton" ).click(function () {
+        if (nextPageTokenVar == null) {
+            alert("No more results to load");
+        } 
+        else {
+        titleSet.length = 0; videoidSet.length = 0; durationSet.length = 0; ytStyleDurationSet.length = 0;
+        getVids(pid);
+        $("#nextPageToken").append(nextPageTokenVar + ", ");
+        }
+});
+// Taking input from contentDetails.duration for each items in the data set.
+// passes each video id to this function.  
+    function getdur(videoid){ 
+        count = 0;
+        $.get( 
+            "https://www.googleapis.com/youtube/v3/videos", { part:'contentDetails', id: videoid, key: devkey}, 
+            function(data){ 
+                $.each(data.items, function(i, item){ 
+                    videodur = item.contentDetails.duration;
+                    ytStyleDurationSet.push(videodur);
+                    videolength = videodur.replace(/PT(\d\d?)H(\d\d?)M(\d\d?)S/,"$1:$2:$3")  //hours:mintes:seconds
+                                          .replace(/PT(\d\d?)M(\d\d?)S/,"$1:$2")            //minutes:seconds
+                                          .replace(/PT(\d\d?)S/,"0:$1");                     //seconds
+                    durationSet.push(videolength);
+                    $("#yt_content").append("<li>" + titleSet[count] + ", <a href='https://youtu.be/" + videoidSet[count] + "'>"+ videoidSet[count]+ "</a>," + durationSet[count] + "</li>");
+                    count++;
+                    }) 
+                }); 
+    }
+
+
+
+//document ready end brackets and )
+});
+});
+
+// regular expression:  [PT(\d)]{3}  <- matches PT and any number together equaling 3 characters. 
+
+</script>
+
+
+</head>
+<body>
+
+<h1>Get Content Details for uploads playlist</h1>
+
+    <p>Based on structure of this code: <a href="http://stackoverflow.com/questions/35638481/appending-code-from-two-functions-jquery">Stack Overflow link </a></p>
+    <p>Refer to this video here: <a href="https://www.youtube.com/watch?v=RjUlmco7v2M">channel uploads in v3</a></p>
+    <p>also helpful to check API calls - <a href="https://developers.google.com/apis-explorer/#p/youtube/v3/">API Explorer</a></p>
+
+    <ul>
+        <li>Channel Name: <div id ="channelname"></div>
+            <input type="text" id="chNameInput" />
+            <button id="submitButton">submit</button>
+
+        </li>
+        <li>API key: <code>AIzaSyBoWMPAh9Tmp2BekV1xAhRvZzqlHLaFbYo</code></li>
+        <li> this is the whole call: <code>https://www.googleapis.com/youtube/v3/videos?part=snippet%2CcontentDetails&id=aqjaiN2VE_w&key=AIzaSyBoWMPAh9Tmp2BekV1xAhRvZzqlHLaFbYo</code></li>
+        <li id="nextPageToken">Current token: </li>
+    </ul>
+    <p></p>
+<div id ="content">
+    <div id="yt_content"></div>
+    <button type="button" class="nextPagebutton">Load more results</button>
+
+</div>
+
+</body>
+</html>
