@@ -1,0 +1,195 @@
+
+<!DOCTYPE html>
+<html>
+<head> 
+    <link rel="icon" href="img/favicon.ico" type="image/x-icon"/>
+    <link rel="shortcut icon" href="img/favicon.ico" type="image/x-icon"/>
+	<title>OAuthIO first try</title>
+	<style>
+    body {background-color: white; font-family: "Open Sans", sans-serif;}
+    #content { padding: 10pt; border: 2px dashed lightgray; }
+    .nextPagebutton { background-color: #4CAF50; font-size: 14px; margin-top: 10px; }
+    #submitButton { background-color: #grey; font-size: 14px; margin-top: 10px; }
+    #yt_content {text-align: left; padding-top: 10px; padding-bottom: 10px; width: 600px;
+    code {background-color: #e8e8e8; border: 1px solid #a8a8a8; border-radius: 3px;
+    padding: 0 2pt;
+    margin: 2pt;
+    font-family: "source-code-pro", Consolas, monospace;
+    font-size: .8em;} 
+    .box {
+    border: 1px solid gray;
+    background-color: #b3c8d0;
+    font-size:14pt;
+    padding-left: 10pt;
+    padding-right: 10pt;
+    min-height: 200px;
+    width: 300px;
+    }
+    .smallbox {
+    border: 1px solid gray;
+    background-color: #b3c8d0;
+    font-size:14pt;
+    padding-left: 10pt;
+    padding-right: 10pt;
+    margin-bottom: 10pt;
+    margin-right: 0;
+    margin-left: 0;
+    min-height: 175px;
+    width: 300px;
+    }    
+    .inline { display: inline-block; }
+
+    </style>
+    
+<script src="oauthio/oauth.js"></script>
+<script type="text/javascript" src="http://127.0.0.1/jquery-1.11.1.js"></script>
+<script>
+
+// define some variables
+var devkey ='AIzaSyBoWMPAh9Tmp2BekV1xAhRvZzqlHLaFbYo'; // not needed w/ oauth
+var titleSet = [];
+var videoidSet = [];
+var durationSet = [];
+var ytStyleDurationSet = [];
+var nextPageTokenVar;
+var maxResults = 10;
+
+// On click of the submit button take channel name input box
+// and assign to userid variable. Variable is used in the first
+// .get call to determine uploads playlist ID. 
+// --------------------------------------------------
+$(document).ready(function(){
+
+$(document).on("click", "#submitButton", function() {
+        var userid = $("#chNameInput").val();
+        var count = 0;
+
+// this is the oauth.io call to get a token 
+// --------------------------------------------------
+OAuth.initialize('jFWMcJQ7olGptuEJHj9X_dy6SAE')
+    OAuth.popup('youtube')
+    .done(function(result) {
+    console.log("token: " + result.access_token);
+    token = result.access_token;
+// --------------------------------------------------      
+
+// this is the first YouTube API v3 call to get the users uploads playlist ID. 
+// It now uses oauth acquired access token from above instead of API key
+// url: https://www.googleapis.com/youtube/v3/channels?part=contentDetails&forUsername=djjacobs1979&access_token={access_token}
+// --------------------------------------------------
+	$.get(
+			"https://www.googleapis.com/youtube/v3/channels", { part: "contentDetails", forUsername: userid, access_token: token },
+				function(data) {
+				       $.each(data.items, function(j, item){ 
+	                    pid = item.contentDetails.relatedPlaylists.uploads;
+	                    console.log("uploads pid: " + pid);
+	                    getVids(pid);
+	                 })});
+// -------------------------------------------------
+
+
+// The getVids function is called by the above with the uploads playlist id (pid).
+// It takes the pid and and calls playlistItems to get a list of all videos within 
+// the defined playlist (uploads). It then loops through each element and calls the
+// getDur function for each one. This probably needs to be improved by adding each
+// video to an array here and then calling the getDur function one. 
+// url: https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId={pid}&access_token={access_token}
+// --------------------------------------------------
+	function getVids(pid) {
+		$.get("https://www.googleapis.com/youtube/v3/playlistItems",{ part: 'snippet', playlistId: pid, pageToken: nextPageTokenVar, maxResults: '50', access_token: token }, 
+                function(data){
+                    nextPageTokenVar = data.nextPageToken;
+                    // console.log("this is token from first if: " + nextPageTokenVar);
+                    $.each(data.items, function(i, item){ 
+                        videoid = item.snippet.resourceId.videoId;
+                        titleSet.push(item.snippet.title);
+                        videoidSet.push(item.snippet.resourceId.videoId);
+                        // console.log(item.snippet.title);
+                        getdur(videoid); 
+                        })}); 
+    }
+// --------------------------------------------------	
+
+// If a playlist has more than the max results items, we need to load them on demand.
+// We use the nextPagebutton to do so. We use a if check to see if we've reached
+// the end of the results. We also are resetting the arrays for the next set of results
+// before calling getVids again. pid stays the same. 
+// -------------------------------------------------- 
+$( ".nextPagebutton" ).click(function () {
+        if (nextPageTokenVar == null) {
+            $("#noMoreResults").append("No more results to load").css("color", "red");
+        } 
+        else {
+        titleSet.length = 0; videoidSet.length = 0; durationSet.length = 0; ytStyleDurationSet.length = 0;
+        getVids(pid);
+        $("#nextPageToken").append(nextPageTokenVar + ", ");
+        }
+});
+// --------------------------------------------------
+
+
+// getdur function takes video_ids from getVids function and calls videos url for each.
+// Also uses regex to reformat times like PT1H33M13S to 1:33:13 duration 
+// url: https://www.googleapis.com/youtube/v3/videos?part=snippet%2CcontentDetails&id={video_id}
+// --------------------------------------------------
+    function getdur(videoid){ 
+        count = 0;
+        $.get( 
+            "https://www.googleapis.com/youtube/v3/videos", { part:'contentDetails', id: videoid, access_token: token}, 
+            function(data){ 
+                $.each(data.items, function(i, item){ 
+                    videodur = item.contentDetails.duration;
+                    // console.log("duration - " + videodur);
+                    ytStyleDurationSet.push(videodur);
+                    videolength = videodur.replace(/PT(\d\d?)H(\d\d?)M(\d\d?)S/,"$1:$2:$3")  //hours:mintes:seconds
+                                          .replace(/PT(\d\d?)M(\d\d?)S/,"$1:$2")             //minutes:seconds
+                                          .replace(/PT(\d\d?)M/,"$1:00")                     //mintues no seconds
+                                          .replace(/PT(\d\d?)S/,"0:$1");                     //seconds
+                    durationSet.push(videolength);
+                    $("#yt_content").append("<li>" + titleSet[count] + ", <a href='https://youtu.be/" + videoidSet[count] + "'>"+ videoidSet[count]+ "</a>," + durationSet[count] + "</li>");
+                    count++;
+                    }) 
+                }); 
+    }
+// -----------------------------------------------
+
+        }); // oauth done function closing
+    }); // onclick closing
+});  // documentReady closing
+
+
+</script>
+
+<body>
+
+<h2>>> YouTube Functions - Get video details</h2>
+    <p><strong>updated 2016_03_17</strong></br>
+    Based on structure of this code: <a href="http://stackoverflow.com/questions/35638481/appending-code-from-two-functions-jquery">Stack Overflow link </a></br>
+    Refer to this video here: <a href="https://www.youtube.com/watch?v=RjUlmco7v2M">channel uploads in v3</a></br>
+    also helpful to check API calls - <a href="https://developers.google.com/apis-explorer/#p/youtube/v3/">API Explorer</a></br>
+    OAuth handling: <a href="https://oauth.io">oauth.io</a></p>
+    <div id="Div1" class="smallbox inline">Search by channel:</br>
+        <div id ="channelname"></div>
+        <input type="text" placeholder="channel_name" id="chNameInput" />
+        <button id="submitButton">submit</button>
+        <li id="nextPageToken"><code>Current token: (null)</code> </li>
+    </div>
+    <div id="Div2" class="smallbox inline">Search by video ID/s:
+        <div id ="videoIDs"></div>
+        <input type="text" placeholder="video id/s" id="vidIdInput" />
+        <button id="submitButton">submit</button>
+        <li id="nextPageToken"><code>Current token: (null)</code> </li>
+    </div>
+    
+        
+    </ul>
+    <p></p>
+<div id ="content">
+    <div id="yt_content"></div>
+    <button type="button" class="nextPagebutton">Load more results</button>
+    <span id="noMoreResults"></span>
+
+</div>
+
+</body>
+</html>
