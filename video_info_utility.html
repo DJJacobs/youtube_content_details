@@ -4,18 +4,18 @@
 <head> 
     <link rel="icon" href="img/favicon.ico" type="image/x-icon"/>
     <link rel="shortcut icon" href="img/favicon.ico" type="image/x-icon"/>
-	<title>OAuthIO first try</title>
+	<title>video info utility</title>
 	<style>
     body {background-color: white; font-family: "Open Sans", sans-serif;}
-    #content { padding: 10pt; border: 2px dashed lightgray; }
+    #content { padding: 10pt; border: 2px dashed lightgray; width: 700px; }
     .nextPagebutton { background-color: #4CAF50; font-size: 14px; margin-top: 10px; }
     #submitButton { background-color: #grey; font-size: 14px; margin-top: 10px; }
-    #yt_content {text-align: left; padding-top: 10px; padding-bottom: 10px; width: 600px;
+    #yt_content {text-align: left; padding-top: 10px; padding-bottom: 10px; width: 600px; }
     code {background-color: #e8e8e8; border: 1px solid #a8a8a8; border-radius: 3px;
     padding: 0 2pt;
     margin: 2pt;
     font-family: "source-code-pro", Consolas, monospace;
-    font-size: .8em;} 
+    font-size: .8em; } 
     .box {
     border: 1px solid gray;
     background-color: #b3c8d0;
@@ -47,10 +47,7 @@
 
 // define some variables
 var devkey ='AIzaSyBoWMPAh9Tmp2BekV1xAhRvZzqlHLaFbYo'; // not needed w/ oauth
-var titleSet = [];
-var videoidSet = [];
-var durationSet = [];
-var ytStyleDurationSet = [];
+var titleSet = []; var videoidSet = []; var durationSet = []; var ytStyleDurationSet = [];
 var nextPageTokenVar;
 var maxResults = 10;
 
@@ -63,7 +60,10 @@ $(document).ready(function(){
 $(document).on("click", "#submitButton", function() {
         var userid = $("#chNameInput").val();
         var count = 0;
+        var enableAuth = $('input[type="checkbox"]:checked');
+        $("#content").append(enableAuth.val());
 
+        if ()
 // this is the oauth.io call to get a token 
 // --------------------------------------------------
 OAuth.initialize('jFWMcJQ7olGptuEJHj9X_dy6SAE')
@@ -117,7 +117,7 @@ OAuth.initialize('jFWMcJQ7olGptuEJHj9X_dy6SAE')
 // -------------------------------------------------- 
 $( ".nextPagebutton" ).click(function () {
         if (nextPageTokenVar == null) {
-            $("#noMoreResults").append("No more results to load").css("color", "red");
+           $("#noMoreResults").append("No more results to load").css("color", "red");
         } 
         else {
         titleSet.length = 0; videoidSet.length = 0; durationSet.length = 0; ytStyleDurationSet.length = 0;
@@ -162,12 +162,14 @@ $( ".nextPagebutton" ).click(function () {
 
 <body>
 
-<h2>>> YouTube Functions - Get video details</h2>
+<h2>>> YouTube Functions - get video details</h2>
     <p><strong>updated 2016_03_17</strong></br>
     Based on structure of this code: <a href="http://stackoverflow.com/questions/35638481/appending-code-from-two-functions-jquery">Stack Overflow link </a></br>
     Refer to this video here: <a href="https://www.youtube.com/watch?v=RjUlmco7v2M">channel uploads in v3</a></br>
     also helpful to check API calls - <a href="https://developers.google.com/apis-explorer/#p/youtube/v3/">API Explorer</a></br>
     OAuth handling: <a href="https://oauth.io">oauth.io</a></p>
+    <input type="checkbox" value="oAuth 2.0 enabled">enable oAuth 2.0</br>
+
     <div id="Div1" class="smallbox inline">Search by channel:</br>
         <div id ="channelname"></div>
         <input type="text" placeholder="channel_name" id="chNameInput" />
@@ -180,12 +182,12 @@ $( ".nextPagebutton" ).click(function () {
         <button id="submitButton">submit</button>
         <li id="nextPageToken"><code>Current token: (null)</code> </li>
     </div>
-    
-        
+          
     </ul>
     <p></p>
+
 <div id ="content">
-    <div id="yt_content"></div>
+    <div id="yt_content"></div><div id="yt_status"></div>
     <button type="button" class="nextPagebutton">Load more results</button>
     <span id="noMoreResults"></span>
 
