@@ -6,3 +6,7 @@ and output to HTML <li>
 
 Flow w/ oauth2.
 
+To-Do:
+-OAuth optional (can select to use OAuth or not)
+-Enable video ID input/s 
+
