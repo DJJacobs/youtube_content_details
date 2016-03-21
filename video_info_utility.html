@@ -56,37 +56,61 @@ var maxResults = 10;
 // .get call to determine uploads playlist ID. 
 // --------------------------------------------------
 $(document).ready(function(){
-
 $(document).on("click", "#submitButton", function() {
         var userid = $("#chNameInput").val();
         var count = 0;
         var enableAuth = $('input[type="checkbox"]:checked');
         $("#content").append(enableAuth.val());
+        if (enableAuth.length > 0 ) {
+                oauthPopup(userid);
+        }
+        else {
+                channelInfo(userid,devkey);
+                console.log("hey" + enableAuth.length );
+        }
+}); // onclick closing
 
-        if ()
-// this is the oauth.io call to get a token 
-// --------------------------------------------------
-OAuth.initialize('jFWMcJQ7olGptuEJHj9X_dy6SAE')
-    OAuth.popup('youtube')
-    .done(function(result) {
-    console.log("token: " + result.access_token);
-    token = result.access_token;
-// --------------------------------------------------      
+function oauthPopup(userid) {
+    // this is the oauth.io call to get a token 
+    // --------------------------------------------------
+    OAuth.initialize('jFWMcJQ7olGptuEJHj9X_dy6SAE')
+        OAuth.popup('youtube')
+        .done(function(result) {
+        console.log("token: " + result.access_token);
+        token = result.access_token;
+        channelInfoAuth(token, userid);
+    // --------------------------------------------------      
+        }); // end OAuth dialog.
+    } // end of oauthPopup function
+
 
 // this is the first YouTube API v3 call to get the users uploads playlist ID. 
 // It now uses oauth acquired access token from above instead of API key
 // url: https://www.googleapis.com/youtube/v3/channels?part=contentDetails&forUsername=djjacobs1979&access_token={access_token}
 // --------------------------------------------------
+function channelInfoAuth(token, userid){
 	$.get(
 			"https://www.googleapis.com/youtube/v3/channels", { part: "contentDetails", forUsername: userid, access_token: token },
 				function(data) {
 				       $.each(data.items, function(j, item){ 
 	                    pid = item.contentDetails.relatedPlaylists.uploads;
 	                    console.log("uploads pid: " + pid);
-	                    getVids(pid);
+	                    getVidsAuth(pid);
 	                 })});
+} //  end channelInfoAuth function
 // -------------------------------------------------
 
+function channelInfo(userid,devkey){
+    $.get(
+            "https://www.googleapis.com/youtube/v3/channels", { part: "contentDetails", forUsername: userid, key: devkey },
+                function(data) {
+                       $.each(data.items, function(j, item){ 
+                        pid = item.contentDetails.relatedPlaylists.uploads;
+                        console.log("uploads pid: " + pid);
+                        getVids(pid,devkey);
+                     })});
+} //  end channelInfo function
+// -------------------------------------------------
 
 // The getVids function is called by the above with the uploads playlist id (pid).
 // It takes the pid and and calls playlistItems to get a list of all videos within 
@@ -95,7 +119,7 @@ OAuth.initialize('jFWMcJQ7olGptuEJHj9X_dy6SAE')
 // video to an array here and then calling the getDur function one. 
 // url: https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId={pid}&access_token={access_token}
 // --------------------------------------------------
-	function getVids(pid) {
+	function getVidsAuth(pid) {
 		$.get("https://www.googleapis.com/youtube/v3/playlistItems",{ part: 'snippet', playlistId: pid, pageToken: nextPageTokenVar, maxResults: '50', access_token: token }, 
                 function(data){
                     nextPageTokenVar = data.nextPageToken;
@@ -105,10 +129,25 @@ OAuth.initialize('jFWMcJQ7olGptuEJHj9X_dy6SAE')
                         titleSet.push(item.snippet.title);
                         videoidSet.push(item.snippet.resourceId.videoId);
                         // console.log(item.snippet.title);
-                        getdur(videoid); 
+                        getdurAuth(videoid,token); 
                         })}); 
     }
-// --------------------------------------------------	
+// --------------------------------------------------
+      function getVids(pid,devkey) {
+        $.get("https://www.googleapis.com/youtube/v3/playlistItems",{ part: 'snippet', playlistId: pid, pageToken: nextPageTokenVar, maxResults: '50', key: devkey }, 
+                function(data){
+                    nextPageTokenVar = data.nextPageToken;
+                    // console.log("this is token from first if: " + nextPageTokenVar);
+                    $.each(data.items, function(i, item){ 
+                        videoid = item.snippet.resourceId.videoId;
+                        titleSet.push(item.snippet.title);
+                        videoidSet.push(item.snippet.resourceId.videoId);
+                        // console.log(item.snippet.title);
+                        getdur(videoid,devkey); 
+                        })}); 
+    }
+
+
 
 // If a playlist has more than the max results items, we need to load them on demand.
 // We use the nextPagebutton to do so. We use a if check to see if we've reached
@@ -135,7 +174,7 @@ $( ".nextPagebutton" ).click(function () {
     function getdur(videoid){ 
         count = 0;
         $.get( 
-            "https://www.googleapis.com/youtube/v3/videos", { part:'contentDetails', id: videoid, access_token: token}, 
+            "https://www.googleapis.com/youtube/v3/videos", { part:'contentDetails', id: videoid, key: devkey}, 
             function(data){ 
                 $.each(data.items, function(i, item){ 
                     videodur = item.contentDetails.duration;
@@ -153,8 +192,27 @@ $( ".nextPagebutton" ).click(function () {
     }
 // -----------------------------------------------
 
-        }); // oauth done function closing
-    }); // onclick closing
+    function getdurAuth(videoid,token){ 
+        count = 0;
+        $.get( 
+            "https://www.googleapis.com/youtube/v3/videos", { part:'contentDetails', id: videoid, access_token: token}, 
+            function(data){ 
+                $.each(data.items, function(i, item){ 
+                    videodur = item.contentDetails.duration;
+                    // console.log("duration - " + videodur);
+                    ytStyleDurationSet.push(videodur);
+                    videolength = videodur.replace(/PT(\d\d?)H(\d\d?)M(\d\d?)S/,"$1:$2:$3")  //hours:mintes:seconds
+                                          .replace(/PT(\d\d?)M(\d\d?)S/,"$1:$2")             //minutes:seconds
+                                          .replace(/PT(\d\d?)M/,"$1:00")                     //mintues no seconds
+                                          .replace(/PT(\d\d?)S/,"0:$1");                     //seconds
+                    durationSet.push(videolength);
+                    $("#yt_content").append("<li>" + titleSet[count] + ", <a href='https://youtu.be/" + videoidSet[count] + "'>"+ videoidSet[count]+ "</a>," + durationSet[count] + "</li>");
+                    count++;
+                    }) 
+                }); 
+    }
+
+
 });  // documentReady closing
 
 
