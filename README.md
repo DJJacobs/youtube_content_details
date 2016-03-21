@@ -10,4 +10,5 @@ To-Do:
 <ul>
 <li> OAuth optional (can select to use OAuth or not) </li>
 <li> Enable video ID input/s  </li>
+<li> Create max results input field  </li>
 </ul>
