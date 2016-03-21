@@ -11,4 +11,5 @@ To-Do:
 <li> OAuth optional (can select to use OAuth or not) </li>
 <li> Enable video ID input/s  </li>
 <li> Create max results input field  </li>
+<li> grab devkey from json </li>
 </ul>
