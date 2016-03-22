@@ -1,0 +1,204 @@
+
+<!DOCTYPE html>
+<html>
+<head> 
+    <link rel="icon" href="img/favicon.ico" type="image/x-icon"/>
+    <link rel="shortcut icon" href="img/favicon.ico" type="image/x-icon"/>
+	<title>video info utility</title>
+	<style>
+    body {background-color: white; font-family: "Open Sans", sans-serif;}
+    #content { padding: 10pt; border: 2px dashed lightgray; width: 700px; }
+    .nextPagebutton { background-color: #4CAF50; font-size: 14px; margin-top: 10px; }
+    #submitButton { background-color: #grey; font-size: 14px; margin-top: 10px; }
+    #yt_content {text-align: left; padding-top: 10px; padding-bottom: 10px; width: 650px; }
+    code {background-color: #e8e8e8; border: 1px solid #a8a8a8; border-radius: 3px;
+    padding: 0 2pt;
+    margin: 2pt;
+    font-family: "source-code-pro", Consolas, monospace;
+    font-size: .8em; } 
+    .box {
+    border: 1px solid gray;
+    background-color: #b3c8d0;
+    font-size:14pt;
+    padding-left: 10pt;
+    padding-right: 10pt;
+    min-height: 200px;
+    width: 300px;
+    }
+    .smallbox {
+    border: 1px solid gray;
+    background-color: #b3c8d0;
+    font-size:14pt;
+    padding-left: 10pt;
+    padding-right: 10pt;
+    margin-bottom: 10pt;
+    margin-right: 0;
+    margin-left: 0;
+    min-height: 175px;
+    width: 300px;
+    }    
+    .inline { display: inline-block; }
+
+    </style>
+    
+<script src="oauthio/oauth.js"></script>
+<script type="text/javascript" src="http://127.0.0.1/jquery-1.11.1.js"></script>
+<script>
+
+// define some variables
+var devkey ='AIzaSyBoWMPAh9Tmp2BekV1xAhRvZzqlHLaFbYo'; // not needed w/ oauth
+var titleSet = []; var videoidSet; var videoidArray = []; var durationSet = []; var ytStyleDurationSet = [];
+var nextPageTokenVar;
+var maxResults = 10;
+
+// On click of the submit button take channel name input box
+// and assign to userid variable. Variable is used in the first
+// .get call to determine uploads playlist ID. 
+// --------------------------------------------------
+$(document).ready(function(){
+
+
+$(document).on("click", "#submitButtonVideos", function() {
+        var count = 0;
+        var videoIdInput = $("#vidIdInput").val().replace(/\s/g,",").replace(/https:\/\/www\.youtube\.com\/watch\?v\=/g, "").replace(/https\:\/\/youtu\.be\//g,"");
+        var videoidSet = videoIdInput.split(",").toString(); //get comma separated array of video id's
+        
+        console.log("This is the set: " + videoidSet);
+        var enableAuth = $('input[type="checkbox"]:checked');
+        $("#content").append("<code>" + enableAuth.val() + "</code>");
+        if (enableAuth.length > 0 ) {
+                oauthPopupVideos(videoidSet);
+        }
+        else {
+                getVideoTitles(videoidSet,devkey);
+                console.log("no authorization enabled");
+        }
+}); // onclick closing - search by Video ID/s. 
+
+
+function oauthPopupVideos(videoidSet) {
+    // this is the oauth.io call to get a token 
+    // --------------------------------------------------
+    OAuth.initialize('jFWMcJQ7olGptuEJHj9X_dy6SAE')
+        OAuth.popup('youtube')
+        .done(function(result) {
+        console.log("token: " + result.access_token);
+        token = result.access_token;
+        getVideoTitlesAuthorized(videoidSet,token);
+    // --------------------------------------------------      
+        }); // end OAuth dialog.
+    } // end of oauthPopup function
+
+
+// -------------------------------------------------
+
+// The getVids function is called by the above with the uploads playlist id (pid).
+// It takes the pid and and calls playlistItems to get a list of all videos within 
+// the defined playlist (uploads). It then loops through each element and calls the
+// getDur function for each one. This probably needs to be improved by adding each
+// video to an array here and then calling the getDur function one. 
+// url: https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId={pid}&access_token={access_token}
+// --------------------------------------------------
+	function getVideoTitlesAuthorized(videoidSet,token) {
+    	$.get("https://www.googleapis.com/youtube/v3/videos",{ part: 'snippet', id: videoidSet, access_token: token }, 
+                function(data){
+                    $.each(data.items, function(i, item){ 
+                        videoidArray.push(item.id);
+                        console.log("video Id: " + videoidArray);
+                        var title = item.snippet.title;
+                        console.log("Title: " + title);
+                        titleSet.push(item.snippet.title);
+                        })}); 
+                    getdurVideosAuth(videoidSet,token); 
+    }
+// --------------------------------------------------
+    function getVideoTitles(videoidSet,devkey) {
+        $.get("https://www.googleapis.com/youtube/v3/videos",{ part: 'snippet', id: videoidSet, key: devkey }, 
+                function(data){
+                    $.each(data.items, function(i, item){ 
+                        videoidArray.push(item.id);
+                        console.log("video Id: " + videoidArray);
+                        var title = item.snippet.title;
+                        console.log("Title: " + title);
+                        titleSet.push(item.snippet.title);
+                        })});
+                    getdurVideos(videoidSet,devkey);
+    }
+
+
+    function getdurVideos(videoidSet,devkey){ 
+        count = 0;
+        $.get( 
+            "https://www.googleapis.com/youtube/v3/videos", { part:'contentDetails', id: videoidSet, key: devkey}, 
+            function(data){ 
+                $.each(data.items, function(i, item){ 
+                    videodur = item.contentDetails.duration;
+                    ytStyleDurationSet.push(videodur);
+                    videolength = videodur.replace(/PT(\d\d?)H(\d\d?)M(\d\d?)S/,"$1:$2:$3")  //hours:mintes:seconds
+                                          .replace(/PT(\d\d?)M(\d\d?)S/,"$1:$2")             //minutes:seconds
+                                          .replace(/PT(\d\d?)M/,"$1:00")                     //mintues no seconds
+                                          .replace(/PT(\d\d?)S/,"0:$1");                     //seconds
+                    durationSet.push(videolength);
+                    $("#yt_content").append("<code>getdurVideos</code><li>" + titleSet[count] + ", <a href='https://youtu.be/" + videoidArray[count] + "'>"+ videoidArray[count]+ "</a>," + durationSet[count] + "</li>");
+                    count++;
+                    }) 
+                }); 
+    }
+// -----------------------------------------------
+
+
+    function getdurVideosAuth(videoidSet,token){ 
+        count = 0;
+        $.get( 
+            "https://www.googleapis.com/youtube/v3/videos", { part:'contentDetails', id: videoidSet, access_token: token}, 
+            function(data){ 
+                $.each(data.items, function(i, item){ 
+                    videodur = item.contentDetails.duration;
+                    ytStyleDurationSet.push(videodur);
+                    videolength = videodur.replace(/PT(\d\d?)H(\d\d?)M(\d\d?)S/,"$1:$2:$3")  //hours:mintes:seconds
+                                          .replace(/PT(\d\d?)M(\d\d?)S/,"$1:$2")             //minutes:seconds
+                                          .replace(/PT(\d\d?)M/,"$1:00")                     //mintues no seconds
+                                          .replace(/PT(\d\d?)S/,"0:$1");                     //seconds
+                    durationSet.push(videolength);
+                    $("#yt_content").append("<code>getdurVideosAuth</code><li>" + titleSet[count] + ", <a href='https://youtu.be/" + videoidArray[count] + "'>"+ videoidArray[count]+ "</a>," + durationSet[count] + "</li>");
+                    count++;
+                    }) 
+                }); 
+    }
+
+
+});  // documentReady closing
+
+
+</script>
+
+<body>
+
+<h2>>> YouTube Functions - get video details</h2>
+    <p><strong>updated 2016_03_17</strong></br>
+    Based on structure of this code: <a href="http://stackoverflow.com/questions/35638481/appending-code-from-two-functions-jquery">Stack Overflow link </a></br>
+    Refer to this video here: <a href="https://www.youtube.com/watch?v=RjUlmco7v2M">channel uploads in v3</a></br>
+    also helpful to check API calls - <a href="https://developers.google.com/apis-explorer/#p/youtube/v3/">API Explorer</a></br>
+    OAuth handling: <a href="https://oauth.io">oauth.io</a></p>
+    <input type="checkbox" value="oAuth 2.0 enabled">enable oAuth 2.0</br>
+
+
+    <div id="Div2" class="smallbox inline">Search by video ID/s:
+        <div id ="videoIDs"></div>
+        <input type="text" placeholder="video id/s" id="vidIdInput" />
+        <button id="submitButtonVideos">submit</button>
+        <li id="nextPageToken"><code>Current token: (null)</code> </li>
+    </div>
+          
+    </ul>
+    <p></p>
+
+<div id ="content">
+    <div id="yt_content"></div><div id="yt_status"></div>
+    <button type="button" class="nextPagebutton">Load more results</button>
+    <span id="noMoreResults"></span>
+
+</div>
+
+</body>
+</html>
