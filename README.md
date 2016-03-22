@@ -8,6 +8,7 @@ Flow w/ oauth2.
 
 To-Do:
 <ul>
+<li>Merge channel search and video Id search</li>
 <li><strike> OAuth optional (can select to use OAuth or not) </strike></li>
 <li><strike> Enable video ID input/s </strike></li>
 <li> Create max results input field  </li>
