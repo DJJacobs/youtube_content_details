@@ -8,8 +8,8 @@ Flow w/ oauth2.
 
 To-Do:
 <ul>
-<li> OAuth optional (can select to use OAuth or not) </li>
-<li> Enable video ID input/s  </li>
+<li><strike> OAuth optional (can select to use OAuth or not) </strike></li>
+<li><strike> Enable video ID input/s </strike></li>
 <li> Create max results input field  </li>
 <li> grab devkey from json </li>
 </ul>
